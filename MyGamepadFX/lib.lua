@@ -1,4 +1,5 @@
--- lib.lua — math primitives; no constants, no CSP API calls
+-- lib.lua — math primitives; no constants, no ac.* API calls
+-- Note: math.clamp is a CSP extension, not available in vanilla LuaJIT.
 local M = {}
 
 -- Deadzone with rescale: removes drift and maps the remaining range to [0,1]

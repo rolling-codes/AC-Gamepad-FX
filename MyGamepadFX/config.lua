@@ -14,7 +14,7 @@ local CFG = {
 
     -- Self-steer
     COUNTERSTEER_GAIN = 0.45,   -- correction strength
-    COUNTERSTEER_DAMP = 0.30,   -- oscillation damping (keep >= 60% of GAIN)
+    COUNTERSTEER_DAMP = 0.30,   -- oscillation damping; must stay >= (COUNTERSTEER_GAIN * 0.6)
 
     -- Slip limit
     SLIP_LIMIT_START  = 0.15,   -- front slip level where reduction begins

@@ -11,10 +11,11 @@ local steerOut = 0.0
 function script.update(dt)
     local car     = ac.getCar(0)
     local gamepad = ac.getGamepad(0)
-    if not car or not gamepad then return end
+    if not car or not gamepad then steerOut = 0.0; return end
+    if dt <= 0 then return end
 
     -- 1. Raw input → deadzone → gamma → speed scale
-    local raw   = gamepad.axes[1] or 0.0
+    local raw   = gamepad.axes[1] or 0.0  -- left stick X (steering)
     local steer = lib.applyGamma(lib.applyDeadzone(raw, CFG.DEADZONE), CFG.GAMMA)
     steer = steer * lib.speedScale(car.speedKmh, CFG)
 
@@ -49,8 +50,8 @@ function script.update(dt)
 
     -- 5. Write to physics
     ac.setSteer(math.clamp(steerOut,               -1.0, 1.0))
-    ac.setGas(  math.clamp(gamepad.axes[3] or 0.0,  0.0, 1.0))
-    ac.setBrake(math.clamp(gamepad.axes[4] or 0.0,  0.0, 1.0))
+    ac.setGas(  math.clamp(gamepad.axes[3] or 0.0,  0.0, 1.0))  -- right trigger
+    ac.setBrake(math.clamp(gamepad.axes[4] or 0.0,  0.0, 1.0))  -- left trigger
 end
 
 function script.reset()
