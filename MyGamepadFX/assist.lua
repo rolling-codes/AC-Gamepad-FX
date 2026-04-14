@@ -35,7 +35,8 @@ function script.update(dt)
     local gas   = gamepad.axes[3] or 0.0
     local brake = gamepad.axes[4] or 0.0
 
-    ac.setSteer(math.clamp(combined, -1.0, 1.0))
+    steerOut = lib.expSmooth(steerOut, combined, CFG.STEER_SMOOTH, dt)
+    ac.setSteer(math.clamp(steerOut, -1.0, 1.0))
     ac.setGas(  math.clamp(gas,     0.0, 1.0))
     ac.setBrake(math.clamp(brake,   0.0, 1.0))
 end
