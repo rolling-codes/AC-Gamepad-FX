@@ -26,10 +26,16 @@ function script.update(dt)
     local steerLimit   = lib.lerp(1.0, CFG.SLIP_LIMIT_MIN, slipFactor)
     local driverInput  = math.clamp(steer, -steerLimit, steerLimit)
 
+    -- Self-steer: simulate caster return-to-center + oscillation damping
+    -- Added AFTER slip limit — correction force is not subject to driver input restrictions
+    local selfSteer = -avgFrontSlip * CFG.COUNTERSTEER_GAIN
+                   -  car.steer    * CFG.COUNTERSTEER_DAMP
+    local combined  = driverInput + selfSteer
+
     local gas   = gamepad.axes[3] or 0.0
     local brake = gamepad.axes[4] or 0.0
 
-    ac.setSteer(math.clamp(driverInput, -1.0, 1.0))
+    ac.setSteer(math.clamp(combined, -1.0, 1.0))
     ac.setGas(  math.clamp(gas,     0.0, 1.0))
     ac.setBrake(math.clamp(brake,   0.0, 1.0))
 end
