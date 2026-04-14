@@ -4,6 +4,7 @@
 
 local CFG = require('config')
 local lib = require('lib')
+-- local dbg = require('debug')   -- uncomment for tuning overlay; never ship enabled
 
 local steerOut = 0.0
 
@@ -34,6 +35,18 @@ function script.update(dt)
 
     local gas   = gamepad.axes[3] or 0.0
     local brake = gamepad.axes[4] or 0.0
+
+    -- if dbg then dbg.draw({
+    --     raw          = raw,
+    --     afterGamma   = steer,         -- value after deadzone + gamma + speed scale, before slip clamp
+    --     steerLimit   = steerLimit,
+    --     driverInput  = driverInput,
+    --     selfSteer    = selfSteer,
+    --     combined     = combined,
+    --     steerOut     = steerOut,
+    --     avgFrontSlip = avgFrontSlip,
+    --     speedKmh     = car.speedKmh,
+    -- }) end
 
     steerOut = lib.expSmooth(steerOut, combined, CFG.STEER_SMOOTH, dt)
     ac.setSteer(math.clamp(steerOut, -1.0, 1.0))
