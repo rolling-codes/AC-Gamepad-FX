@@ -15,6 +15,7 @@ function script.update(dt)
     -- Raw passthrough — replaced stage by stage in later tasks
     local raw   = gamepad.axes[1] or 0.0
     local steer = lib.applyGamma(lib.applyDeadzone(raw, CFG.DEADZONE), CFG.GAMMA)
+    steer = steer * lib.speedScale(car.speedKmh, CFG)
     local gas   = gamepad.axes[3] or 0.0
     local brake = gamepad.axes[4] or 0.0
 
