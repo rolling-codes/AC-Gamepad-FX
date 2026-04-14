@@ -13,7 +13,8 @@ function script.update(dt)
     if not car or not gamepad then return end
 
     -- Raw passthrough — replaced stage by stage in later tasks
-    local steer = gamepad.axes[1] or 0.0
+    local raw   = gamepad.axes[1] or 0.0
+    local steer = lib.applyGamma(lib.applyDeadzone(raw, CFG.DEADZONE), CFG.GAMMA)
     local gas   = gamepad.axes[3] or 0.0
     local brake = gamepad.axes[4] or 0.0
 
