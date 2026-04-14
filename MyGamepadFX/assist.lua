@@ -16,10 +16,20 @@ function script.update(dt)
     local raw   = gamepad.axes[1] or 0.0
     local steer = lib.applyGamma(lib.applyDeadzone(raw, CFG.DEADZONE), CFG.GAMMA)
     steer = steer * lib.speedScale(car.speedKmh, CFG)
+
+    -- Slip limit: clamp driver input range when front tires are sliding
+    local avgFrontSlip = (car.wheelsSlip[0] + car.wheelsSlip[1]) * 0.5
+    local slipFactor   = math.clamp(
+        (avgFrontSlip - CFG.SLIP_LIMIT_START) / CFG.SLIP_LIMIT_RANGE,
+        0.0, 1.0
+    )
+    local steerLimit   = lib.lerp(1.0, CFG.SLIP_LIMIT_MIN, slipFactor)
+    local driverInput  = math.clamp(steer, -steerLimit, steerLimit)
+
     local gas   = gamepad.axes[3] or 0.0
     local brake = gamepad.axes[4] or 0.0
 
-    ac.setSteer(math.clamp(steer,  -1.0, 1.0))
+    ac.setSteer(math.clamp(driverInput, -1.0, 1.0))
     ac.setGas(  math.clamp(gas,     0.0, 1.0))
     ac.setBrake(math.clamp(brake,   0.0, 1.0))
 end
