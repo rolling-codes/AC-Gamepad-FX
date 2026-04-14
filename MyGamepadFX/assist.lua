@@ -19,7 +19,7 @@ function script.update(dt)
     steer = steer * lib.speedScale(car.speedKmh, CFG)
 
     -- 2. Slip limit — clamps driver input only; self-steer is added after
-    local avgFrontSlip = (car.wheelsSlip[0] + car.wheelsSlip[1]) * 0.5
+    local avgFrontSlip = (car.wheelsSlip[0] + car.wheelsSlip[1]) * 0.5  -- average of FL + FR
     local slipFactor   = math.clamp(
         (avgFrontSlip - CFG.SLIP_LIMIT_START) / CFG.SLIP_LIMIT_RANGE,
         0.0, 1.0
@@ -33,6 +33,8 @@ function script.update(dt)
     local combined  = driverInput + selfSteer
 
     -- 4. Smooth combined signal (driver + self-steer together — avoids correction lag)
+    steerOut = lib.expSmooth(steerOut, combined, CFG.STEER_SMOOTH, dt)
+
     -- if dbg then dbg.draw({
     --     raw          = raw,
     --     afterScale   = steer,         -- value after deadzone + gamma + speed scale, before slip clamp
@@ -44,7 +46,6 @@ function script.update(dt)
     --     avgFrontSlip = avgFrontSlip,
     --     speedKmh     = car.speedKmh,
     -- }) end
-    steerOut = lib.expSmooth(steerOut, combined, CFG.STEER_SMOOTH, dt)
 
     -- 5. Write to physics
     ac.setSteer(math.clamp(steerOut,               -1.0, 1.0))
