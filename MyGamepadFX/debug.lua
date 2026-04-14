@@ -6,7 +6,7 @@ local D = {}
 
 -- Call once per frame from script.update, passing the pipeline's internal values.
 function D.draw(values)
-    -- values = { raw, afterDZ, afterScale, driverInput, steerLimit,
+    -- values = { raw, afterScale, driverInput, steerLimit,
     --            avgFrontSlip, selfSteer, combined, steerOut, speedKmh }
     ac.debug("1 raw_input",      values.raw)
     ac.debug("2 after_scale",    values.afterScale)
