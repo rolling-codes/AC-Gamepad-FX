@@ -1,0 +1,112 @@
+name: Quality
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  syntax:
+    name: Lua Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua 5.2
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y lua5.2
+      - name: Check syntax
+        run: |
+          find . -name "*.lua" -not -path "./.github/*" | while read f; do
+            echo "Checking $f"
+            luac5.2 -p "$f" || exit 1
+          done
+          echo "All Lua files pass syntax check"
+
+  lint:
+    name: Luacheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install luacheck
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y luarocks
+          sudo luarocks install luacheck
+      - name: Run luacheck
+        run: luacheck .
+
+  validate:
+    name: Structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Required files present
+        run: |
+          for f in MyGamepadFX/manifest.ini MyGamepadFX/config.lua MyGamepadFX/lib.lua MyGamepadFX/assist.lua MyGamepadFX/debug.lua MyGamepadFX_Config/manifest.ini MyGamepadFX_Config/app.lua; do
+            test -f "$f" || { echo "FAIL: missing $f"; exit 1; }
+          done
+          echo "All required files present"
+      - name: Manifest keys
+        run: |
+          grep -q "^NAME" MyGamepadFX/manifest.ini || { echo "FAIL: MyGamepadFX/manifest.ini missing NAME"; exit 1; }
+          grep -q "^VERSION" MyGamepadFX/manifest.ini || { echo "FAIL: MyGamepadFX/manifest.ini missing VERSION"; exit 1; }
+          grep -q "^NAME" MyGamepadFX_Config/manifest.ini || { echo "FAIL: MyGamepadFX_Config/manifest.ini missing NAME"; exit 1; }
+          grep -q "^FUNCTION_MAIN" MyGamepadFX_Config/manifest.ini || { echo "FAIL: MyGamepadFX_Config/manifest.ini missing FUNCTION_MAIN"; exit 1; }
+          echo "Manifests OK"
+      - name: Config keys
+        run: |
+          for key in DEADZONE GAMMA STEER_SMOOTH SPEED_SCALE_START SPEED_SCALE_END SPEED_SCALE_MIN COUNTERSTEER_GAIN COUNTERSTEER_DAMP SLIP_LIMIT_START SLIP_LIMIT_RANGE SLIP_LIMIT_MIN GAS_DEADZONE GAS_GAMMA BRAKE_DEADZONE BRAKE_GAMMA HAPTICS_ENABLED HAPTICS_SLIP_START HAPTICS_SLIP_MAX HAPTICS_STRENGTH DEBUG_MODE; do
+            grep -q "$key" MyGamepadFX/config.lua || { echo "FAIL: config.lua missing $key"; exit 1; }
+          done
+          echo "All 20 config keys present"
+
+  comment:
+    name: PR Comment
+    needs: [syntax, lint, validate]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const results = {
+              'Lua Syntax': '${{ needs.syntax.result }}',
+              'Luacheck':   '${{ needs.lint.result }}',
+              'Structure':  '${{ needs.validate.result }}',
+            }
+            const icon = r => ({ success: '✅', failure: '❌', skipped: '⏭️' }[r] || '⏳')
+            const allGood = Object.values(results).every(r => r === 'success')
+            const rows = Object.entries(results).map(([k, v]) => `| ${k} | ${icon(v)} ${v} |`).join('\n')
+            const body = [
+              `## Quality Check ${allGood ? '✅ Passed' : '❌ Issues found'}`,
+              '',
+              '| Check | Result |',
+              '|---|---|',
+              rows,
+            ].join('\n')
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            })
+            const existing = comments.find(c => c.body.startsWith('## Quality Check'))
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              })
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              })
+            }
