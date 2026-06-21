@@ -2,6 +2,15 @@
 -- Note: math.clamp is a CSP extension, not available in vanilla LuaJIT.
 local M = {}
 
+local _logged = {}
+
+function M.logOnce(key, message)
+    if not _logged[key] then
+        ac.log(message)
+        _logged[key] = true
+    end
+end
+
 -- Deadzone with rescale: removes drift and maps the remaining range to [0,1]
 -- with no discontinuity at the deadzone edge.
 function M.applyDeadzone(v, dz)
