@@ -1,5 +1,14 @@
 -- config.lua — all tunable constants; no logic lives here
 local CFG = {
+    -- Axis calibration (Hall Effect controllers)
+    -- Defaults produce no change from v1.0 behaviour.
+    STEER_CENTER  = 0.0,   -- raw stick value at rest; subtracted before deadzone
+    STEER_RANGE   = 1.0,   -- max raw deflection from center (scale to ±1.0)
+    GAS_REST      = 0.0,   -- raw trigger value when fully released
+    GAS_MAX       = 1.0,   -- raw trigger value when fully pressed
+    BRAKE_REST    = 0.0,   -- raw trigger value when fully released
+    BRAKE_MAX     = 1.0,   -- raw trigger value when fully pressed
+
     -- Deadzone & curve
     DEADZONE          = 0.08,   -- stick deadzone radius
     GAMMA             = 1.6,    -- steering curve exponent (>1 = more center precision)

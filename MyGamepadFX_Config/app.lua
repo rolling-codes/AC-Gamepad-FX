@@ -12,6 +12,12 @@ local LIVE_CFG_PATH = ac.getFolder(ac.FolderID.ExtLua) .. '/joypad-assist/MyGame
 
 -- Defaults mirror config.lua — used when no saved file exists yet
 local cfg = {
+    STEER_CENTER       = 0.0,
+    STEER_RANGE        = 1.0,
+    GAS_REST           = 0.0,
+    GAS_MAX            = 1.0,
+    BRAKE_REST         = 0.0,
+    BRAKE_MAX          = 1.0,
     DEADZONE           = 0.08,
     GAMMA              = 1.6,
     STEER_SMOOTH       = 0.12,
@@ -40,6 +46,12 @@ local saveTimer = 0
 local function saveLiveCfg()
     local ok, err = pcall(function()
         local ini = ac.INIConfig.load(LIVE_CFG_PATH)
+        ini:set('PARAMS', 'STEER_CENTER',       cfg.STEER_CENTER)
+        ini:set('PARAMS', 'STEER_RANGE',        cfg.STEER_RANGE)
+        ini:set('PARAMS', 'GAS_REST',           cfg.GAS_REST)
+        ini:set('PARAMS', 'GAS_MAX',            cfg.GAS_MAX)
+        ini:set('PARAMS', 'BRAKE_REST',         cfg.BRAKE_REST)
+        ini:set('PARAMS', 'BRAKE_MAX',          cfg.BRAKE_MAX)
         ini:set('PARAMS', 'DEADZONE',           cfg.DEADZONE)
         ini:set('PARAMS', 'GAMMA',              cfg.GAMMA)
         ini:set('PARAMS', 'STEER_SMOOTH',       cfg.STEER_SMOOTH)
@@ -70,6 +82,12 @@ end
 local function loadSaved()
     local ok, ini = pcall(ac.INIConfig.load, LIVE_CFG_PATH)
     if not ok or not ini then return end
+    cfg.STEER_CENTER       = ini:get('PARAMS', 'STEER_CENTER',       cfg.STEER_CENTER)
+    cfg.STEER_RANGE        = ini:get('PARAMS', 'STEER_RANGE',        cfg.STEER_RANGE)
+    cfg.GAS_REST           = ini:get('PARAMS', 'GAS_REST',           cfg.GAS_REST)
+    cfg.GAS_MAX            = ini:get('PARAMS', 'GAS_MAX',            cfg.GAS_MAX)
+    cfg.BRAKE_REST         = ini:get('PARAMS', 'BRAKE_REST',         cfg.BRAKE_REST)
+    cfg.BRAKE_MAX          = ini:get('PARAMS', 'BRAKE_MAX',          cfg.BRAKE_MAX)
     cfg.DEADZONE           = ini:get('PARAMS', 'DEADZONE',           cfg.DEADZONE)
     cfg.GAMMA              = ini:get('PARAMS', 'GAMMA',              cfg.GAMMA)
     cfg.STEER_SMOOTH       = ini:get('PARAMS', 'STEER_SMOOTH',       cfg.STEER_SMOOTH)
@@ -112,6 +130,16 @@ function windowMain(dt)
     end
     saveTimer = saveTimer - dt
 
+    ui.text('Calibration')
+    ui.separator()
+    sliderRow('Stick center', 'STEER_CENTER', -0.10, 0.10, '%.3f')
+    sliderRow('Stick range',  'STEER_RANGE',   0.80, 1.00, '%.3f')
+    sliderRow('Gas rest',     'GAS_REST',       0.00, 0.10, '%.3f')
+    sliderRow('Gas max',      'GAS_MAX',        0.90, 1.00, '%.3f')
+    sliderRow('Brake rest',   'BRAKE_REST',     0.00, 0.10, '%.3f')
+    sliderRow('Brake max',    'BRAKE_MAX',      0.90, 1.00, '%.3f')
+
+    ui.offsetCursorY(8)
     ui.text('Steering')
     ui.separator()
     sliderRow('Deadzone',    'DEADZONE',     0.0,  0.30, '%.2f')
