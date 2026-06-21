@@ -1,5 +1,6 @@
 -- CSP (Custom Shaders Patch) LuaJIT 5.2 environment
 std = "lua52"
+max_line_length = false
 
 globals = {
     "ac",         -- CSP API namespace
