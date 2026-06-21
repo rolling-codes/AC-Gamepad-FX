@@ -6,6 +6,27 @@ A [Custom Shaders Patch](https://acstuff.ru/patch/) Gamepad FX Lua script for As
 
 ---
 
+## ⚠️ MANDATORY: AC Controls Pre-Flight Checklist
+
+**This script will not work correctly unless AC's built-in controls are set to pass-through mode. Do this before driving.**
+
+In Content Manager: **Settings** (gear icon) → **Assetto Corsa** → **Controls** tab
+
+1. **Input Method** → `Gamepad`
+2. **Speed Sensitivity** → `0%`
+3. **Steering Speed** → `100%`
+4. **Steering Gamma** → `100%`
+5. **Steering Filter** → `0%`
+6. **Steering Deadzone** → `0%`
+
+> **Why this matters:** This script owns all steering correction. If AC also applies gamma, deadzone, or filter, the effects stack — your gamma curve gets applied twice, your deadzone gets applied twice, and the result is unusable. There is no way for the script to detect or fix this automatically; you must set these manually.
+
+For step-by-step screenshots showing each setting in Content Manager, see [INSTALLATION.md](INSTALLATION.md).
+
+If steering feels broken after installing, the AC settings are the first thing to check. See [Troubleshooting.md](Troubleshooting.md).
+
+---
+
 ## What it does
 
 Five corrections applied in order every frame:
@@ -37,15 +58,7 @@ assettocorsa/extension/lua/joypad-assist/MyGamepadFX/
 
 Activate in **Content Manager → Settings → Custom Shaders Patch → Gamepad FX → MyGamepadFX**.
 
-**Recommended AC Controls settings** (let the script handle these):
-
-| Setting | Value |
-|---|---|
-| Speed Sensitivity | 0% |
-| Steering Speed | 100% |
-| Steering Gamma | 100% |
-| Steering Filter | 0% |
-| Steering Deadzone | 0% |
+Complete step-by-step installation with screenshots: [INSTALLATION.md](INSTALLATION.md).
 
 ---
 
@@ -55,7 +68,7 @@ Activate in **Content Manager → Settings → Custom Shaders Patch → Gamepad 
 MyGamepadFX/
 ├── manifest.ini   — CSP plugin declaration
 ├── config.lua     — all tunable constants (edit this to tune feel)
-├── lib.lua        — math helpers: deadzone, gamma, lerp, expSmooth, speedScale
+├── lib.lua        — math helpers: deadzone, gamma, lerp, expSmooth, speedScale, logOnce
 ├── assist.lua     — pipeline assembly and CSP entry points
 └── debug.lua      — live telemetry overlay (disabled by default)
 ```
@@ -80,6 +93,13 @@ COUNTERSTEER_DAMP = 0.30   -- must stay >= COUNTERSTEER_GAIN * 0.6 to prevent os
 SLIP_LIMIT_START  = 0.15   -- front slip level where limit kicks in
 SLIP_LIMIT_RANGE  = 0.25   -- slip range for full reduction
 SLIP_LIMIT_MIN    = 0.70   -- minimum authority at peak slip
+
+GAS_DEADZONE      = 0.01   -- removes trigger drift at rest
+GAS_GAMMA         = 1.1    -- slight curve for smooth power delivery
+BRAKE_DEADZONE    = 0.01   -- avoids unintended light brake from trigger drift
+BRAKE_GAMMA       = 1.0    -- linear brake (no curve)
+
+HAPTICS_ENABLED   = false  -- set true if your controller supports trigger rumble
 ```
 
 **Tuning order:** deadzone → gamma → speed scale → countersteer gain → damp → slip limit → smoothing last.
@@ -90,13 +110,19 @@ If the car oscillates (tank-slapper), raise `COUNTERSTEER_DAMP` before touching 
 
 ## Debug overlay
 
-Enable the live telemetry overlay during tuning by uncommenting one line in `assist.lua`:
+Enable the live telemetry overlay during tuning by uncommenting two lines in `assist.lua`:
 
 ```lua
-local dbg = require('debug')   -- uncomment this line
+local dbg = require('debug')   -- line 1: uncomment this
 ```
 
-Shows raw input, post-scale value, steer limit, driver input, self-steer contribution, combined signal, smoothed output, front slip, and speed — updated every frame via `ac.debug()`.
+And inside `script.update`, uncomment the `dbg.draw({...})` block. Also set in `config.lua`:
+
+```lua
+DEBUG_MODE = true
+```
+
+Shows raw input, post-scale value, steer limit, driver input, self-steer contribution, combined signal, smoothed output, front slip, speed, actual steer angle, and frame time — updated every frame via `ac.debug()`.
 
 **Never ship with this enabled.**
 
@@ -106,3 +132,16 @@ Shows raw input, post-scale value, steer limit, driver input, self-steer contrib
 
 - Assetto Corsa with [Custom Shaders Patch](https://acstuff.ru/patch/) v0.2.0 or later
 - A gamepad (tested layout: left stick X = steering, right trigger = throttle, left trigger = brake)
+
+---
+
+## Troubleshooting
+
+See [Troubleshooting.md](Troubleshooting.md) for a full Q&A covering common symptoms.
+
+**Quick reference:**
+- Steering twitchy/spikey → AC Steering Gamma not at 100%
+- Dead zone at center → AC Steering Deadzone not at 0%
+- Laggy feel → AC Steering Filter not at 0%
+- Car drifts at center → raise `DEADZONE` in config.lua
+- Car oscillates → raise `COUNTERSTEER_DAMP` in config.lua
