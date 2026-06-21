@@ -1,4 +1,4 @@
--- lib.lua — math primitives; no constants, no ac.* API calls
+-- lib.lua — math primitives and pipeline stage functions; no constants, no ac.* API calls
 -- Note: math.clamp is a CSP extension, not available in vanilla LuaJIT.
 local M = {}
 
@@ -62,6 +62,51 @@ function M.speedScale(speedKmh, cfg)
         0.0, 1.0
     )
     return M.lerp(1.0, cfg.SPEED_SCALE_MIN, t)
+end
+
+-- Yaw rate from car object. Returns 0.0 if unavailable (pre-v2.0 CSP).
+-- car.localAngularVelocity is body-frame rad/s; .y = yaw (positive = rotating left).
+function M.yawRate(car)
+    if not car.localAngularVelocity then return 0.0 end
+    return car.localAngularVelocity.y
+end
+
+-- Classify front vs rear slip to determine oversteer/understeer state.
+-- Returns { front, rear, understeer, oversteer } all in [0, 1].
+function M.stageSlipClassify(car, cfg)
+    local front = (car.wheelsSlip[0] + car.wheelsSlip[1]) * 0.5
+    local rear  = (car.wheelsSlip[2] + car.wheelsSlip[3]) * 0.5
+    local delta = front - rear   -- positive = understeer, negative = oversteer
+    local thresh = cfg.SLIP_DELTA_THRESH
+    return {
+        front      = front,
+        rear       = rear,
+        understeer = math.clamp( delta / thresh, 0.0, 1.0),
+        oversteer  = math.clamp(-delta / thresh, 0.0, 1.0),
+    }
+end
+
+-- Yaw damping: opposes car rotation and steer angle oscillation.
+-- overFactor scales yaw correction up when oversteering; effectiveDamp handles load transfer.
+function M.stageYawDamp(yaw, steerAngle, cfg, overFactor, effectiveDamp)
+    local yawPart  = -yaw * cfg.YAW_GAIN * M.lerp(1.0, 1.0 + cfg.OS_BOOST, overFactor)
+    local dampPart = -steerAngle * effectiveDamp
+    return yawPart + dampPart
+end
+
+-- Adaptive smooth: faster at the limit, stable when settled.
+-- stability in [0, 1] where 1 = fully stable.
+function M.stageAdaptiveSmooth(current, target, stability, cfg, dt)
+    local smooth = M.lerp(cfg.STEER_SMOOTH_MIN, cfg.STEER_SMOOTH, stability)
+    return M.expSmooth(current, target, smooth, dt)
+end
+
+-- Rear wheelspin ratio. Returns value in [0, 1] where 0 = no spin, 1 = full spin.
+function M.stageWheelspin(car)
+    local expected = car.speedKmh / 3.6 / 0.3   -- ~0.3m typical tyre radius
+    if expected < 1.0 then return 0.0 end
+    local rearAvg = (car.wheelAngularSpeed[2] + car.wheelAngularSpeed[3]) * 0.5
+    return math.clamp(rearAvg / expected - 1.0, 0.0, 1.0)
 end
 
 return M

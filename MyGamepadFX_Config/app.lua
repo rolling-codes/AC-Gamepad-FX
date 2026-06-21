@@ -21,11 +21,15 @@ local cfg = {
     DEADZONE           = 0.08,
     GAMMA              = 1.6,
     STEER_SMOOTH       = 0.12,
+    STEER_SMOOTH_MIN   = 0.04,
     SPEED_SCALE_START  = 60,
     SPEED_SCALE_END    = 180,
     SPEED_SCALE_MIN    = 0.35,
-    COUNTERSTEER_GAIN  = 0.45,
-    COUNTERSTEER_DAMP  = 0.30,
+    YAW_GAIN           = 0.5,
+    YAW_DAMP           = 0.3,
+    SLIP_DELTA_THRESH  = 0.08,
+    US_REDUCTION       = 0.25,
+    OS_BOOST           = 0.3,
     SLIP_LIMIT_START   = 0.15,
     SLIP_LIMIT_RANGE   = 0.25,
     SLIP_LIMIT_MIN     = 0.70,
@@ -33,6 +37,9 @@ local cfg = {
     GAS_GAMMA          = 1.1,
     BRAKE_DEADZONE     = 0.01,
     BRAKE_GAMMA        = 1.0,
+    TC_ENABLED         = false,
+    TC_SLIP_THRESHOLD  = 0.15,
+    TC_MAX_REDUCTION   = 0.5,
     HAPTICS_ENABLED    = false,
     HAPTICS_SLIP_START = 0.3,
     HAPTICS_SLIP_MAX   = 1.0,
@@ -55,11 +62,15 @@ local function saveLiveCfg()
         ini:set('PARAMS', 'DEADZONE',           cfg.DEADZONE)
         ini:set('PARAMS', 'GAMMA',              cfg.GAMMA)
         ini:set('PARAMS', 'STEER_SMOOTH',       cfg.STEER_SMOOTH)
+        ini:set('PARAMS', 'STEER_SMOOTH_MIN',   cfg.STEER_SMOOTH_MIN)
         ini:set('PARAMS', 'SPEED_SCALE_START',  cfg.SPEED_SCALE_START)
         ini:set('PARAMS', 'SPEED_SCALE_END',    cfg.SPEED_SCALE_END)
         ini:set('PARAMS', 'SPEED_SCALE_MIN',    cfg.SPEED_SCALE_MIN)
-        ini:set('PARAMS', 'COUNTERSTEER_GAIN',  cfg.COUNTERSTEER_GAIN)
-        ini:set('PARAMS', 'COUNTERSTEER_DAMP',  cfg.COUNTERSTEER_DAMP)
+        ini:set('PARAMS', 'YAW_GAIN',           cfg.YAW_GAIN)
+        ini:set('PARAMS', 'YAW_DAMP',           cfg.YAW_DAMP)
+        ini:set('PARAMS', 'SLIP_DELTA_THRESH',  cfg.SLIP_DELTA_THRESH)
+        ini:set('PARAMS', 'US_REDUCTION',       cfg.US_REDUCTION)
+        ini:set('PARAMS', 'OS_BOOST',           cfg.OS_BOOST)
         ini:set('PARAMS', 'SLIP_LIMIT_START',   cfg.SLIP_LIMIT_START)
         ini:set('PARAMS', 'SLIP_LIMIT_RANGE',   cfg.SLIP_LIMIT_RANGE)
         ini:set('PARAMS', 'SLIP_LIMIT_MIN',     cfg.SLIP_LIMIT_MIN)
@@ -67,6 +78,9 @@ local function saveLiveCfg()
         ini:set('PARAMS', 'GAS_GAMMA',          cfg.GAS_GAMMA)
         ini:set('PARAMS', 'BRAKE_DEADZONE',     cfg.BRAKE_DEADZONE)
         ini:set('PARAMS', 'BRAKE_GAMMA',        cfg.BRAKE_GAMMA)
+        ini:set('PARAMS', 'TC_ENABLED',         cfg.TC_ENABLED)
+        ini:set('PARAMS', 'TC_SLIP_THRESHOLD',  cfg.TC_SLIP_THRESHOLD)
+        ini:set('PARAMS', 'TC_MAX_REDUCTION',   cfg.TC_MAX_REDUCTION)
         ini:set('PARAMS', 'HAPTICS_ENABLED',    cfg.HAPTICS_ENABLED)
         ini:set('PARAMS', 'HAPTICS_SLIP_START', cfg.HAPTICS_SLIP_START)
         ini:set('PARAMS', 'HAPTICS_SLIP_MAX',   cfg.HAPTICS_SLIP_MAX)
@@ -91,11 +105,15 @@ local function loadSaved()
     cfg.DEADZONE           = ini:get('PARAMS', 'DEADZONE',           cfg.DEADZONE)
     cfg.GAMMA              = ini:get('PARAMS', 'GAMMA',              cfg.GAMMA)
     cfg.STEER_SMOOTH       = ini:get('PARAMS', 'STEER_SMOOTH',       cfg.STEER_SMOOTH)
+    cfg.STEER_SMOOTH_MIN   = ini:get('PARAMS', 'STEER_SMOOTH_MIN',   cfg.STEER_SMOOTH_MIN)
     cfg.SPEED_SCALE_START  = ini:get('PARAMS', 'SPEED_SCALE_START',  cfg.SPEED_SCALE_START)
     cfg.SPEED_SCALE_END    = ini:get('PARAMS', 'SPEED_SCALE_END',    cfg.SPEED_SCALE_END)
     cfg.SPEED_SCALE_MIN    = ini:get('PARAMS', 'SPEED_SCALE_MIN',    cfg.SPEED_SCALE_MIN)
-    cfg.COUNTERSTEER_GAIN  = ini:get('PARAMS', 'COUNTERSTEER_GAIN',  cfg.COUNTERSTEER_GAIN)
-    cfg.COUNTERSTEER_DAMP  = ini:get('PARAMS', 'COUNTERSTEER_DAMP',  cfg.COUNTERSTEER_DAMP)
+    cfg.YAW_GAIN           = ini:get('PARAMS', 'YAW_GAIN',           cfg.YAW_GAIN)
+    cfg.YAW_DAMP           = ini:get('PARAMS', 'YAW_DAMP',           cfg.YAW_DAMP)
+    cfg.SLIP_DELTA_THRESH  = ini:get('PARAMS', 'SLIP_DELTA_THRESH',  cfg.SLIP_DELTA_THRESH)
+    cfg.US_REDUCTION       = ini:get('PARAMS', 'US_REDUCTION',       cfg.US_REDUCTION)
+    cfg.OS_BOOST           = ini:get('PARAMS', 'OS_BOOST',           cfg.OS_BOOST)
     cfg.SLIP_LIMIT_START   = ini:get('PARAMS', 'SLIP_LIMIT_START',   cfg.SLIP_LIMIT_START)
     cfg.SLIP_LIMIT_RANGE   = ini:get('PARAMS', 'SLIP_LIMIT_RANGE',   cfg.SLIP_LIMIT_RANGE)
     cfg.SLIP_LIMIT_MIN     = ini:get('PARAMS', 'SLIP_LIMIT_MIN',     cfg.SLIP_LIMIT_MIN)
@@ -103,6 +121,9 @@ local function loadSaved()
     cfg.GAS_GAMMA          = ini:get('PARAMS', 'GAS_GAMMA',          cfg.GAS_GAMMA)
     cfg.BRAKE_DEADZONE     = ini:get('PARAMS', 'BRAKE_DEADZONE',     cfg.BRAKE_DEADZONE)
     cfg.BRAKE_GAMMA        = ini:get('PARAMS', 'BRAKE_GAMMA',        cfg.BRAKE_GAMMA)
+    cfg.TC_ENABLED         = ini:get('PARAMS', 'TC_ENABLED',         cfg.TC_ENABLED)
+    cfg.TC_SLIP_THRESHOLD  = ini:get('PARAMS', 'TC_SLIP_THRESHOLD',  cfg.TC_SLIP_THRESHOLD)
+    cfg.TC_MAX_REDUCTION   = ini:get('PARAMS', 'TC_MAX_REDUCTION',   cfg.TC_MAX_REDUCTION)
     cfg.HAPTICS_ENABLED    = ini:get('PARAMS', 'HAPTICS_ENABLED',    cfg.HAPTICS_ENABLED)
     cfg.HAPTICS_SLIP_START = ini:get('PARAMS', 'HAPTICS_SLIP_START', cfg.HAPTICS_SLIP_START)
     cfg.HAPTICS_SLIP_MAX   = ini:get('PARAMS', 'HAPTICS_SLIP_MAX',   cfg.HAPTICS_SLIP_MAX)
@@ -142,9 +163,10 @@ function windowMain(dt)
     ui.offsetCursorY(8)
     ui.text('Steering')
     ui.separator()
-    sliderRow('Deadzone',    'DEADZONE',     0.0,  0.30, '%.2f')
-    sliderRow('Gamma',       'GAMMA',        1.0,  3.0,  '%.2f')
-    sliderRow('Smooth',      'STEER_SMOOTH', 0.01, 0.50, '%.2f')
+    sliderRow('Deadzone',    'DEADZONE',         0.0,  0.30, '%.2f')
+    sliderRow('Gamma',       'GAMMA',            1.0,  3.0,  '%.2f')
+    sliderRow('Smooth',      'STEER_SMOOTH',     0.01, 0.50, '%.2f')
+    sliderRow('Smooth min',  'STEER_SMOOTH_MIN', 0.01, 0.20, '%.2f')
 
     ui.offsetCursorY(8)
     ui.text('Speed Scaling')
@@ -154,10 +176,13 @@ function windowMain(dt)
     sliderRow('Min scale',   'SPEED_SCALE_MIN',   0.1, 1.0, '%.2f')
 
     ui.offsetCursorY(8)
-    ui.text('Self-Steer')
+    ui.text('Dynamics')
     ui.separator()
-    sliderRow('Gain',        'COUNTERSTEER_GAIN', 0.0, 1.0, '%.2f')
-    sliderRow('Damp',        'COUNTERSTEER_DAMP', 0.0, 1.0, '%.2f')
+    sliderRow('Yaw gain',    'YAW_GAIN',         0.0,  1.5,  '%.2f')
+    sliderRow('Yaw damp',    'YAW_DAMP',         0.0,  1.0,  '%.2f')
+    sliderRow('Slip thresh', 'SLIP_DELTA_THRESH', 0.01, 0.30, '%.2f')
+    sliderRow('US reduce',   'US_REDUCTION',      0.0,  1.0,  '%.2f')
+    sliderRow('OS boost',    'OS_BOOST',          0.0,  1.0,  '%.2f')
 
     ui.offsetCursorY(8)
     ui.text('Slip Limit')
@@ -173,6 +198,18 @@ function windowMain(dt)
     sliderRow('Gas gamma',   'GAS_GAMMA',      0.5, 2.0,  '%.2f')
     sliderRow('Brake dz',    'BRAKE_DEADZONE', 0.0, 0.10, '%.3f')
     sliderRow('Brake gamma', 'BRAKE_GAMMA',    0.5, 2.0,  '%.2f')
+
+    ui.offsetCursorY(8)
+    ui.text('Traction Control')
+    ui.separator()
+    if ui.checkbox('Enabled##tc', cfg.TC_ENABLED) then
+        cfg.TC_ENABLED = not cfg.TC_ENABLED
+        dirty = true
+    end
+    if cfg.TC_ENABLED then
+        sliderRow('Slip thresh',   'TC_SLIP_THRESHOLD', 0.05, 0.5, '%.2f')
+        sliderRow('Max reduction', 'TC_MAX_REDUCTION',  0.1,  1.0, '%.2f')
+    end
 
     ui.offsetCursorY(8)
     ui.text('Haptics')
