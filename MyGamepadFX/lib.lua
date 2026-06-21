@@ -11,6 +11,21 @@ function M.logOnce(key, message)
     end
 end
 
+-- Normalise a symmetric axis (stick) given its rest offset and physical range.
+-- Output is clamped to [-1, 1]. With center=0, range=1 this is an identity.
+function M.normalizeAxis(raw, center, range)
+    if range == 0 then return 0.0 end
+    return math.clamp((raw - center) / range, -1.0, 1.0)
+end
+
+-- Normalise a unipolar axis (trigger) given rest and max raw values.
+-- Output is clamped to [0, 1]. With rest=0, maxVal=1 this is an identity.
+function M.normalizeTrigger(raw, rest, maxVal)
+    local span = maxVal - rest
+    if span <= 0 then return 0.0 end
+    return math.clamp((raw - rest) / span, 0.0, 1.0)
+end
+
 -- Deadzone with rescale: removes drift and maps the remaining range to [0,1]
 -- with no discontinuity at the deadzone edge.
 function M.applyDeadzone(v, dz)

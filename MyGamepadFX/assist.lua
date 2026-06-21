@@ -1,6 +1,6 @@
 -- assist.lua — pipeline assembly and CSP entry points
 -- Pipeline (execution order):
---   raw input → deadzone/gamma → speed scale → slip limit (driver only) → + self-steer → smooth → clamp → output
+--   raw input → calibrate → deadzone/gamma → speed scale → slip limit (driver only) → + self-steer → smooth → clamp → output
 
 local CFG = require('config')
 local lib = require('lib')
@@ -18,6 +18,12 @@ local liveCfgTimer  = 0.5  -- start first check after 0.5s to avoid startup nois
 local function applyLiveCfg()
     local ok, ini = pcall(ac.INIConfig.load, LIVE_CFG_PATH)
     if not ok or not ini then return end
+    CFG.STEER_CENTER       = ini:get('PARAMS', 'STEER_CENTER',       CFG.STEER_CENTER)
+    CFG.STEER_RANGE        = ini:get('PARAMS', 'STEER_RANGE',        CFG.STEER_RANGE)
+    CFG.GAS_REST           = ini:get('PARAMS', 'GAS_REST',           CFG.GAS_REST)
+    CFG.GAS_MAX            = ini:get('PARAMS', 'GAS_MAX',            CFG.GAS_MAX)
+    CFG.BRAKE_REST         = ini:get('PARAMS', 'BRAKE_REST',         CFG.BRAKE_REST)
+    CFG.BRAKE_MAX          = ini:get('PARAMS', 'BRAKE_MAX',          CFG.BRAKE_MAX)
     CFG.DEADZONE           = ini:get('PARAMS', 'DEADZONE',           CFG.DEADZONE)
     CFG.GAMMA              = ini:get('PARAMS', 'GAMMA',              CFG.GAMMA)
     CFG.STEER_SMOOTH       = ini:get('PARAMS', 'STEER_SMOOTH',       CFG.STEER_SMOOTH)
@@ -83,9 +89,10 @@ function script.update(dt)
         firstFrameDiagnostics = true
     end
 
-    -- 1. Raw input → deadzone → gamma → speed scale
-    local raw   = gamepad.axes[1] or 0.0  -- left stick X (steering)
-    local steer = lib.applyGamma(lib.applyDeadzone(raw, CFG.DEADZONE), CFG.GAMMA)
+    -- 1. Raw input → calibrate → deadzone → gamma → speed scale
+    local raw        = gamepad.axes[1] or 0.0  -- left stick X (steering)
+    local calibrated = lib.normalizeAxis(raw, CFG.STEER_CENTER, CFG.STEER_RANGE)
+    local steer      = lib.applyGamma(lib.applyDeadzone(calibrated, CFG.DEADZONE), CFG.GAMMA)
     steer = steer * lib.speedScale(car.speedKmh, CFG)
 
     -- 2. Slip limit — clamps driver input only; self-steer is added after
@@ -129,9 +136,11 @@ function script.update(dt)
     end
 
     -- 5. Write to physics
+    local rawGas   = lib.normalizeTrigger(gamepad.axes[3] or 0.0, CFG.GAS_REST,   CFG.GAS_MAX)
+    local rawBrake = lib.normalizeTrigger(gamepad.axes[4] or 0.0, CFG.BRAKE_REST, CFG.BRAKE_MAX)
     ac.setSteer(math.clamp(steerOut, -1.0, 1.0))
-    ac.setGas(  math.clamp(lib.applyGamma(lib.applyDeadzone(gamepad.axes[3] or 0.0, CFG.GAS_DEADZONE),   CFG.GAS_GAMMA),   0.0, 1.0))
-    ac.setBrake(math.clamp(lib.applyGamma(lib.applyDeadzone(gamepad.axes[4] or 0.0, CFG.BRAKE_DEADZONE), CFG.BRAKE_GAMMA), 0.0, 1.0))
+    ac.setGas(  math.clamp(lib.applyGamma(lib.applyDeadzone(rawGas,   CFG.GAS_DEADZONE),   CFG.GAS_GAMMA),   0.0, 1.0))
+    ac.setBrake(math.clamp(lib.applyGamma(lib.applyDeadzone(rawBrake, CFG.BRAKE_DEADZONE), CFG.BRAKE_GAMMA), 0.0, 1.0))
 end
 
 function script.reset()
